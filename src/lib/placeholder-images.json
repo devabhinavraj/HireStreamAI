@@ -1,0 +1,40 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-dashboard",
+      "description": "Premium AI Dashboard Preview",
+      "imageUrl": "https://picsum.photos/seed/dashboard/1200/800",
+      "imageHint": "SaaS dashboard interface"
+    },
+    {
+      "id": "recruiter-1",
+      "description": "Professional Recruiter Portrait",
+      "imageUrl": "https://picsum.photos/seed/rec1/100/100",
+      "imageHint": "professional person"
+    },
+    {
+      "id": "recruiter-2",
+      "description": "HR Manager Portrait",
+      "imageUrl": "https://picsum.photos/seed/rec2/100/100",
+      "imageHint": "business person"
+    },
+    {
+      "id": "company-logo-1",
+      "description": "Tech Company Logo",
+      "imageUrl": "https://picsum.photos/seed/tech1/100/100",
+      "imageHint": "abstract tech logo"
+    },
+    {
+      "id": "company-logo-2",
+      "description": "SaaS Company Logo",
+      "imageUrl": "https://picsum.photos/seed/tech2/100/100",
+      "imageHint": "abstract brand logo"
+    },
+    {
+      "id": "hero-email-tool",
+      "description": "Email Marketing Dashboard",
+      "imageUrl": "https://picsum.photos/seed/email/1200/800",
+      "imageHint": "email dashboard"
+    }
+  ]
+}
