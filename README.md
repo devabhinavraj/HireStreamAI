@@ -85,4 +85,4 @@ Interactive dashboard with:
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone <your-repo-link>
+git clone <https://hire-stream-ai-qdg7.vercel.app/>
