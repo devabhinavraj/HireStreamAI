@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export function DashboardNavbar() {
   const { user, logout } = useAuthStore();
@@ -28,7 +29,7 @@ export function DashboardNavbar() {
   };
 
   return (
-    <header className="h-16 border-b bg-background/50 backdrop-blur-xl fixed top-0 right-0 left-64 z-30 px-6 flex items-center justify-between">
+    <header className="h-16 border-b border-border/50 bg-background/50 backdrop-blur-xl fixed top-0 right-0 left-64 z-30 px-6 flex items-center justify-between">
       <div className="flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -56,7 +57,7 @@ export function DashboardNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-3 px-2 rounded-2xl hover:bg-muted/50">
               <Avatar className="w-8 h-8 rounded-xl border border-border">
-                <AvatarImage src={user?.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.fullName || 'user'}`} />
+                <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.fullName || 'user'}`} />
                 <AvatarFallback>{user?.fullName?.substring(0, 2).toUpperCase() || 'US'}</AvatarFallback>
               </Avatar>
               <div className="text-left hidden sm:block">
@@ -65,14 +66,18 @@ export function DashboardNavbar() {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 mt-2">
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 mt-2 backdrop-blur-xl bg-card/80">
             <DropdownMenuLabel className="font-bold">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="rounded-xl">Profile</DropdownMenuItem>
-            <DropdownMenuItem className="rounded-xl">Settings</DropdownMenuItem>
+            <Link href="/dashboard/profile">
+              <DropdownMenuItem className="rounded-xl cursor-pointer">Profile</DropdownMenuItem>
+            </Link>
+            <Link href="/dashboard/profile">
+              <DropdownMenuItem className="rounded-xl cursor-pointer">Settings</DropdownMenuItem>
+            </Link>
             <DropdownMenuItem className="rounded-xl">Subscription</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="rounded-xl text-destructive" onClick={handleLogout}>Logout</DropdownMenuItem>
+            <DropdownMenuItem className="rounded-xl text-destructive focus:text-destructive focus:bg-destructive/10" onClick={handleLogout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

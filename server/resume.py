@@ -1,69 +1,38 @@
-"""
-HireStreamAI — Resume API Routes
-==================================
-Endpoints:
-  POST /upload-resume   — Upload & parse a resume file
-  POST /analyze         — Full ATS analysis of resume vs JD
-"""
-
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Query
+from typing import Optional, List
 from loguru import logger
+from datetime import datetime
+import os
+import shutil
 
 from parser import ResumeParser
 from scorer import ATSScorer
 from skill_gap import SkillGapAnalyzer
 from helpers import extract_text_from_bytes
 from config import settings
+from database import db
+from models import Resume, UserInDB, PyObjectId
+from auth import get_current_user, log_activity
 
-router = APIRouter()
+router = APIRouter(prefix="/resumes", tags=["Resumes"])
 
-# ── Shared ML instances (loaded once at startup) ──────────────────────────────
+# ── Shared ML instances ───────────────────────────────────────────────────────
 _parser    = ResumeParser()
 _scorer    = ATSScorer()
 _skill_gap = SkillGapAnalyzer()
 
+UPLOAD_DIR = "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
 
-# ── Request / Response Models ─────────────────────────────────────────────────
-
-class AnalyzeRequest(BaseModel):
-    resume_text:               str
-    job_description:           str
-    required_skills:           Optional[list[str]] = None
-    required_experience_years: int = 0
-    required_education_level:  str = "bachelor"
-
-class AnalyzeResponse(BaseModel):
-    candidate_name:    str
-    email:             Optional[str]
-    extracted_skills:  list[str]
-    experience_years:  int
-    education:         list[str]
-    ats_score:         float
-    ats_grade:         str
-    match_percentage:  float
-    component_scores:  dict
-    matched_skills:    list[str]
-    missing_skills:    list[str]
-    skill_gap_report:  dict
-
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
-@router.post("/upload-resume", summary="Upload and parse a resume file")
-async def upload_resume(file: UploadFile = File(...)):
-    """
-    Upload a resume (PDF / DOCX / TXT) and receive a structured candidate profile.
-
-    Returns extracted: name, email, phone, skills, education, experience, projects, certifications.
-    """
+@router.post("/upload", response_model=Resume)
+async def upload_resume(
+    file: UploadFile = File(...),
+    current_user: UserInDB = Depends(get_current_user)
+):
     ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in settings.ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type '{ext}'. Allowed: {settings.ALLOWED_EXTENSIONS}",
-        )
+        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {settings.ALLOWED_EXTENSIONS}")
 
     contents = await file.read()
     if len(contents) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
@@ -74,61 +43,94 @@ async def upload_resume(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Could not extract text: {e}")
 
-    if not text.strip():
-        raise HTTPException(status_code=422, detail="Resume appears empty or unreadable.")
+    # Save file locally
+    timestamp = int(datetime.utcnow().timestamp())
+    filename = f"{current_user.id}_{timestamp}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    with open(file_path, "wb") as buffer:
+        buffer.write(contents)
 
+    # Parse and Score
     profile = _parser.parse(text)
-    logger.info(f"Parsed resume: {profile['name']}")
-
-    return {
-        "status":         "success",
-        "filename":       file.filename,
-        "candidate":      profile,
-    }
-
-
-@router.post("/analyze", response_model=AnalyzeResponse, summary="Full ATS analysis")
-async def analyze(request: AnalyzeRequest):
-    """
-    Parse resume text, compute ATS score against a job description,
-    and generate a skill gap report — all in one call.
-
-    Body:
-      - resume_text: Raw resume text
-      - job_description: Job description text
-      - required_skills: (optional) explicit required skills
-      - required_experience_years: (optional) minimum experience
-      - required_education_level: (optional) "bachelor", "master", etc.
-    """
-    # Parse
-    profile = _parser.parse(request.resume_text)
-
-    # Score
+    
+    # We use a default JD for initial scoring or just save the extracted skills
     ats_result = _scorer.score(
         candidate_profile=profile,
-        job_description=request.job_description,
-        required_skills=request.required_skills,
-        required_experience_years=request.required_experience_years,
-        required_education_level=request.required_education_level,
+        job_description="Sample Job Description for initial scoring", # Placeholder or could be passed
     )
 
-    # Skill gap
-    gap_report = _skill_gap.analyze(
-        candidate_skills=profile["skills"],
-        required_skills=ats_result["required_skills"],
+    new_resume = {
+        "userId": str(current_user.id),
+        "fileName": file.filename,
+        "fileUrl": file_path,
+        "fileType": ext,
+        "atsScore": ats_result["ats_score"],
+        "parsedText": text,
+        "skills": profile["skills"],
+        "recommendations": ats_result.get("recommendations", []),
+        "createdAt": datetime.utcnow()
+    }
+
+    result = await db.db.resumes.insert_one(new_resume)
+    new_resume["_id"] = result.inserted_id
+
+    # Update user stats
+    user_resumes = await db.db.resumes.find({"userId": str(current_user.id)}).to_list(None)
+    total_score = sum(r["atsScore"] for r in user_resumes)
+    avg_score = total_score / len(user_resumes) if user_resumes else 0
+
+    await db.db.users.update_one(
+        {"_id": current_user.id},
+        {
+            "$inc": {"resumeCount": 1},
+            "$set": {"atsAverageScore": avg_score, "updatedAt": datetime.utcnow()}
+        }
     )
 
-    return AnalyzeResponse(
-        candidate_name=   profile["name"],
-        email=            profile.get("email"),
-        extracted_skills= profile["skills"],
-        experience_years= profile["experience_years"],
-        education=        profile["education"],
-        ats_score=        ats_result["ats_score"],
-        ats_grade=        ats_result["ats_grade"],
-        match_percentage= ats_result["match_percentage"],
-        component_scores= ats_result["component_scores"],
-        matched_skills=   ats_result["matched_skills"],
-        missing_skills=   ats_result["missing_skills"],
-        skill_gap_report= gap_report,
+    await log_activity(current_user.id, "upload", f"Uploaded resume: {file.filename}")
+
+    return Resume(**new_resume)
+
+@router.get("/history", response_model=List[Resume])
+async def get_resume_history(
+    current_user: UserInDB = Depends(get_current_user),
+    limit: int = Query(10, ge=1)
+):
+    resumes = await db.db.resumes.find({"userId": str(current_user.id)}).sort("createdAt", -1).to_list(limit)
+    return resumes
+
+@router.get("/{resume_id}", response_model=Resume)
+async def get_resume_details(
+    resume_id: str,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    resume = await db.db.resumes.find_one({"_id": PyObjectId(resume_id), "userId": str(current_user.id)})
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    return Resume(**resume)
+
+@router.delete("/{resume_id}")
+async def delete_resume(
+    resume_id: str,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    resume = await db.db.resumes.find_one({"_id": PyObjectId(resume_id), "userId": str(current_user.id)})
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    # Delete file
+    if os.path.exists(resume["fileUrl"]):
+        os.remove(resume["fileUrl"])
+    
+    await db.db.resumes.delete_one({"_id": PyObjectId(resume_id)})
+    
+    # Update count
+    await db.db.users.update_one(
+        {"_id": current_user.id},
+        {"$inc": {"resumeCount": -1}}
     )
+    
+    await log_activity(current_user.id, "delete", f"Deleted resume: {resume['fileName']}")
+    
+    return {"message": "Resume deleted successfully"}

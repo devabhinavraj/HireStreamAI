@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface User {
+export interface User {
   id: string;
   fullName: string;
+  username?: string;
   email: string;
-  profile_image?: string;
+  profileImage?: string;
   subscriptionPlan: string;
   role: string;
+  resumeCount: number;
+  atsAverageScore: number;
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthState {
@@ -16,12 +22,13 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
-  updateUser: (user: User) => void;
+  updateUser: (user: Partial<User>) => void;
+  checkAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -33,10 +40,23 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem('token');
         set({ user: null, token: null, isAuthenticated: false });
       },
-      updateUser: (user) => set({ user }),
+      updateUser: (userData) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, ...userData } });
+        }
+      },
+      checkAuth: () => {
+        const { token, user } = get();
+        if (token && user) {
+          set({ isAuthenticated: true });
+        } else {
+          set({ isAuthenticated: false });
+        }
+      }
     }),
     {
-      name: 'auth-storage',
+      name: 'hirestream-auth',
     }
   )
 );

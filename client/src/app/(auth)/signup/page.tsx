@@ -106,18 +106,11 @@ export default function SignupPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    className="pl-10 rounded-xl h-12 bg-muted/30 border-muted-foreground/20 focus:ring-brand-purple"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required
-                  />
-                </div>
+                <PasswordInput 
+                  value={formData.password}
+                  onChange={(val) => setFormData({...formData, password: val})}
+                  onValidityChange={setIsPasswordValid}
+                />
               </div>
 
               {error && (

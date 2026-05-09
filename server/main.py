@@ -17,7 +17,7 @@ from loguru import logger
 from contextlib import asynccontextmanager
 from config import settings
 from database import connect_to_mongo, close_mongo_connection
-import resume, matching, recommendations, auth
+import resume, matching, recommendations, auth, analytics_routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,9 +44,10 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router,             prefix="/api/auth", tags=["Authentication"])
-app.include_router(resume.router,           prefix="",  tags=["Resume"])
+app.include_router(resume.router,           prefix="/api",  tags=["Resume"])
 app.include_router(matching.router,         prefix="",  tags=["Matching & Scoring"])
 app.include_router(recommendations.router,  prefix="",  tags=["Recommendations"])
+app.include_router(analytics_routes.router, prefix="/api",  tags=["Analytics"])
 
 
 @app.get("/", tags=["Health"])
