@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: 'AI-powered resume screening, ATS scoring, and auto job matching for recruiters and candidates.',
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -21,6 +23,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen overflow-x-hidden">
         {children}
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );
