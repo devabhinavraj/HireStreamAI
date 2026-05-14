@@ -1,6 +1,7 @@
-# Exclude all local environments
+# Exclude all local environments (wherever they are)
 **/venv/
 **/.venv/
+**/backend/
 .env
 **/.env
 
