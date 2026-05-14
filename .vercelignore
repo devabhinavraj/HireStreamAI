@@ -1,0 +1,27 @@
+# Exclude all local environments (wherever they are)
+**/venv/
+**/.venv/
+.env
+**/.env
+
+# Exclude build artifacts and caches
+**/.next/
+**/node_modules/
+**/__pycache__/
+.turbo/
+
+# Exclude large data or local uploads
+**/uploads/
+*.pdf
+*.docx
+*.bin
+*.pt
+*.h5
+*.lib
+*.dll
+
+# Exclude IDE and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
