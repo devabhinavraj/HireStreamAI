@@ -52,7 +52,7 @@ export default function PricingPage() {
       return;
     }
 
-    if (user?.subscription_plan === planId) {
+    if (user?.subscriptionPlan === planId) {
       alert("You are already on this plan!");
       return;
     }
@@ -61,7 +61,7 @@ export default function PricingPage() {
     try {
       // In a real world app, this would redirect to Stripe Checkout
       // For now, we'll simulate the plan update in our database
-      const response = await axios.put('/api/auth/update-profile', { subscription_plan: planId });
+      const response = await axios.put('/api/auth/update-profile', { subscriptionPlan: planId });
       updateUser(response.data);
       alert(`Success! You have been upgraded to the ${planId.toUpperCase()} plan.`);
       router.push('/dashboard');
@@ -145,7 +145,7 @@ export default function PricingPage() {
                   onClick={() => handleSelectPlan(plan.planId)}
                   disabled={loadingPlan === plan.planId}
                 >
-                  {loadingPlan === plan.planId ? 'Processing...' : (isAuthenticated && user?.subscription_plan === plan.planId ? 'Current Plan' : 'Get Started')}
+                  {loadingPlan === plan.planId ? 'Processing...' : (isAuthenticated && user?.subscriptionPlan === plan.planId ? 'Current Plan' : 'Get Started')}
                 </Button>
               </CardFooter>
             </Card>
