@@ -75,14 +75,6 @@ Interactive dashboard with:
 - Scikit-learn
 
 ### 🗄 Database
-- PostgreSQL
 - MongoDB
 
 ---
-
-## 🚀 How to Run the Project
-
-### 1️⃣ Clone the Repository
-
-```bash
-git clone <https://hire-stream-ai-qdg7.vercel.app/>
